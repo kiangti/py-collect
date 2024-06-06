@@ -1,0 +1,45 @@
+name: 'Upstream Sync'
+
+on:
+  schedule:
+    # Scheduled every day at 16:00 UTC (00:00 UTC+8)
+    - cron:  '0 16 * * *'
+
+  workflow_dispatch:
+
+jobs:
+  sync_latest_from_upstream:
+    runs-on: ubuntu-latest
+    name: Sync latest commits from upstream repo
+
+    env:
+      UPSTREAM_SYNC_REPO: wzdnzd/aggregator
+      TARGET_SYNC_BRANCH: main
+      UPSTREAM_SYNC_BRANCH: main
+
+    steps:
+    - name: Checkout target repo
+      uses: actions/checkout@v3
+
+    - name: Sync upstream changes
+      id: sync
+      uses: aormsby/Fork-Sync-With-Upstream-action@v3.4.1
+      with:
+        target_repo_token: ${{ secrets.GITHUB_TOKEN }}
+        upstream_sync_repo: ${{ env.UPSTREAM_SYNC_REPO }}
+        target_sync_branch: ${{ env.TARGET_SYNC_BRANCH }}
+        upstream_sync_branch: ${{ env.UPSTREAM_SYNC_BRANCH }}
+      
+    - name: New commits found
+      if: steps.sync.outputs.has_new_commits == 'true'
+      run: echo "New commits were found to sync."
+    
+    - name: No new commits
+      if: steps.sync.outputs.has_new_commits == 'false'
+      run: echo "There were no new commits."
+
+    - name: Sync check
+      if: failure()
+      run: |
+        echo "[Error] Sync upstream check failed
+        exit 1
